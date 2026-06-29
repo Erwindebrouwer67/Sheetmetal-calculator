@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#0D3755">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Plaatwerk Calc">
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <title>Plaatwerk Calculator — Inno Mechatronics</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:      #0D3755;
+      --blue2:     #00547B;
+      --orange:    #ED6842;
+      --grey:      #E5E1E0;
+      --light-bg:  #F0F4F7;
+      --white:     #FFFFFF;
+      --text:      #1A2B38;
+      --text-muted:#5A7080;
+      --green:     #27AE60;
+      --red:       #E74C3C;
+      --radius:    16px;
+      --radius-sm: 10px;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Poppins', Arial, sans-serif;
+      background: var(--light-bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app-header {
+      background: var(--blue);
+      color: var(--white);
+      padding: 0 16px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(13,55,85,0.18);
+    }
+    .app-header .logo-area { display: flex; align-items: center; gap: 10px; }
+    .beeldmerk { width: 28px; height: 28px; flex-shrink: 0; }
+    .header-titles h1 { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; line-height: 1.1; }
+    .header-titles span { font-size: 10px; font-weight: 300; color: var(--orange); letter-spacing: 0.06em; text-transform: uppercase; }
+    .tagline { font-size: 9px; font-weight: 300; color: rgba(255,255,255,0.45); letter-spacing: 0.1em; text-transform: uppercase; }
+
+    .tab-bar { display: flex; background: var(--blue); border-top: 1px solid rgba(255,255,255,0.1); }
+    .tab-btn {
+      flex: 1; padding: 10px 4px 8px; background: none; border: none;
+      color: rgba(255,255,255,0.45); font-family: 'Poppins', Arial, sans-serif;
+      font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+      cursor: pointer; border-bottom: 3px solid transparent; transition: color 0.2s, border-color 0.2s;
+    }
+    .tab-btn.active { color: var(--white); border-bottom-color: var(--orange); }
+
+    .main { padding: 16px; max-width: 600px; margin: 0 auto; padding-bottom: 32px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── STEP UPLOAD CARD ── */
+    .step-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      margin-bottom: 14px;
+      overflow: hidden;
+      box-shadow: 0 1px 6px rgba(13,55,85,0.07);
+    }
+    .step-header {
+      background: var(--blue2);
+      color: var(--white);
+      padding: 10px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .step-body { padding: 14px 16px; }
+
+    .drop-zone {
+      border: 2px dashed var(--grey);
+      border-radius: var(--radius-sm);
+      padding: 20px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--orange);
+      background: #FEF3EF;
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .drop-zone .dz-icon { font-size: 28px; margin-bottom: 6px; }
+    .drop-zone .dz-label { font-size: 13px; font-weight: 600; color: var(--blue); }
+    .drop-zone .dz-sub   { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* Status banner */
+    .step-status {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      margin-top: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .step-status.loading { display: flex; background: #EBF5FB; color: var(--blue2); }
+    .step-status.success { display: flex; background: #EAFAF1; color: var(--green); }
+    .step-status.error   { display: flex; background: #FDEDEC; color: var(--red); }
+
+    .spinner {
+      width: 18px; height: 18px; border: 2px solid rgba(0,84,123,0.2);
+      border-top-color: var(--blue2); border-radius: 50%;
+      animation: spin 0.8s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Analyse resultaat badge */
+    .analyse-badge {
+      display: none;
+      background: var(--light-bg);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      margin-top: 10px;
+      font-size: 11px;
+    }
+    .analyse-badge.visible { display: block; }
+    .ab-row { display: flex; justify-content: space-between; padding: 3px 0; }
+    .ab-label { color: var(--text-muted); }
+    .ab-val   { font-weight: 700; color: var(--blue); }
+
+    /* ── SECTION CARDS ── */
+    .section-card {
+      background: var(--white); border-radius: var(--radius);
+      margin-bottom: 14px; overflow: hidden;
+      box-shadow: 0 1px 6px rgba(13,55,85,0.07);
+    }
+    .section-header {
+      background: var(--blue); color: var(--white);
+      padding: 10px 16px; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-header.orange { background: var(--orange); }
+    .section-body { padding: 14px 16px; }
+
+    .field { margin-bottom: 12px; }
+    .field:last-child { margin-bottom: 0; }
+    .field label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; letter-spacing: 0.02em; }
+    .field-row { display: flex; align-items: center; gap: 8px; }
+    .field input, .field select {
+      width: 100%; padding: 10px 12px; border: 1.5px solid var(--grey);
+      border-radius: var(--radius-sm); font-family: 'Poppins', Arial, sans-serif;
+      font-size: 14px; font-weight: 600; color: var(--blue); background: #F7FAFC;
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s; -webkit-appearance: none;
+    }
+    .field input:focus, .field select:focus {
+      border-color: var(--orange); box-shadow: 0 0 0 3px rgba(237,104,66,0.15); background: var(--white);
+    }
+    .field input.autofilled {
+      border-color: var(--blue2); background: #EBF5FB;
+    }
+    .field .unit { font-size: 11px; font-weight: 600; color: var(--text-muted); white-space: nowrap; min-width: 36px; }
+    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* Results */
+    .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .result-card { background: var(--white); border-radius: var(--radius); padding: 14px 14px 12px; box-shadow: 0 1px 6px rgba(13,55,85,0.07); text-align: center; }
+    .result-card .rc-label { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .result-card .rc-value { font-size: 22px; font-weight: 700; color: var(--blue); line-height: 1.1; }
+    .result-card .rc-unit  { font-size: 10px; font-weight: 400; color: var(--text-muted); }
+    .result-card.highlight { background: var(--blue); }
+    .result-card.highlight .rc-label { color: rgba(255,255,255,0.6); }
+    .result-card.highlight .rc-value { color: var(--white); font-size: 26px; }
+    .result-card.highlight .rc-unit  { color: rgba(255,255,255,0.6); }
+    .result-card.accent { background: var(--orange); }
+    .result-card.accent .rc-label { color: rgba(255,255,255,0.75); }
+    .result-card.accent .rc-value { color: var(--white); font-size: 26px; }
+    .result-card.accent .rc-unit  { color: rgba(255,255,255,0.75); }
+
+    .breakdown { background: var(--white); border-radius: var(--radius); overflow: hidden; box-shadow: 0 1px 6px rgba(13,55,85,0.07); margin-bottom: 14px; }
+    .breakdown-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--light-bg); font-size: 13px; }
+    .breakdown-row:last-child { border-bottom: none; }
+    .breakdown-row .br-label { color: var(--text-muted); }
+    .breakdown-row .br-val   { font-weight: 700; color: var(--blue); }
+    .breakdown-row.total { background: var(--light-bg); }
+    .breakdown-row.total .br-label { font-weight: 700; color: var(--blue); }
+    .breakdown-row.total .br-val   { color: var(--orange); font-size: 15px; }
+
+    .kosten-row { display: flex; justify-content: space-between; padding: 10px 0; font-size: 13px; border-bottom: 1px solid var(--light-bg); align-items: center; }
+    .kosten-row:last-child { border-bottom: none; }
+    .kosten-row .kr-label { color: var(--text-muted); }
+    .kosten-row .kr-val   { font-weight: 700; color: var(--blue); }
+
+    /* Normen */
+    .normen-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .normen-table th { background: var(--blue); color: var(--white); padding: 8px 10px; text-align: left; font-weight: 600; font-size: 11px; }
+    .normen-table td { padding: 8px 10px; border-bottom: 1px solid var(--light-bg); color: var(--text); }
+    .normen-table tr:nth-child(even) td { background: #F7FAFC; }
+    .normen-table tr:last-child td { border-bottom: none; }
+
+    .btn-primary {
+      width: 100%; padding: 14px; background: var(--blue); color: var(--white);
+      border: none; border-radius: var(--radius); font-family: 'Poppins', Arial, sans-serif;
+      font-size: 13px; font-weight: 700; letter-spacing: 0.04em; cursor: pointer;
+      margin-top: 4px; transition: background 0.2s;
+    }
+    .btn-primary:active { background: var(--blue2); }
+
+    /* Server URL instelling */
+    .server-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+    }
+    .server-row input {
+      flex: 1; padding: 8px 10px; border: 1.5px solid var(--grey);
+      border-radius: var(--radius-sm); font-family: 'Poppins', Arial, sans-serif;
+      font-size: 12px; color: var(--text); background: #F7FAFC; outline: none;
+    }
+    .server-dot {
+      width: 10px; height: 10px; border-radius: 50%; background: var(--grey); flex-shrink: 0;
+    }
+    .server-dot.online  { background: var(--green); }
+    .server-dot.offline { background: var(--red); }
+
+    .app-footer { text-align: center; padding: 20px 16px 12px; font-size: 10px; color: var(--text-muted); letter-spacing: 0.04em; }
+    .app-footer strong { color: var(--blue); }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo-area">
+    <svg class="beeldmerk" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="20,4 36,34 4,34" fill="none" stroke="#ED6842" stroke-width="2.5" stroke-linejoin="round"/>
+      <polygon points="20,11 30,29 10,29" fill="none" stroke="#ED6842" stroke-width="1.5" stroke-linejoin="round" opacity="0.6"/>
+      <line x1="20" y1="4" x2="20" y2="34" stroke="#ED6842" stroke-width="1" opacity="0.3"/>
+    </svg>
+    <div class="header-titles">
+      <h1>Plaatwerk Calculator</h1>
+      <span>Inno Mechatronics</span>
+    </div>
+  </div>
+  <div class="tagline">Driving the flow</div>
+</header>
+
+<nav class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('invoer')">Invoer</button>
+  <button class="tab-btn" onclick="showTab('resultaat')">Resultaat</button>
+  <button class="tab-btn" onclick="showTab('normen')">Normen</button>
+</nav>
+
+<main class="main">
+
+  <!-- ══════════════════════════ TAB: INVOER ══════════════════════════ -->
+  <div class="tab-panel active" id="tab-invoer">
+
+    <!-- STEP Upload -->
+    <div class="step-card">
+      <div class="step-header">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        STEP Analyse
+      </div>
+      <div class="step-body">
+        <!-- Server URL -->
+        <div class="server-row">
+          <div class="server-dot" id="serverDot"></div>
+          <input type="text" id="serverUrl" value="http://localhost:5050" placeholder="http://localhost:5050">
+          <button onclick="checkServer()" style="padding:7px 12px; background:var(--blue); color:white; border:none; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;">Test</button>
+        </div>
+
+        <!-- Drop zone -->
+        <div class="drop-zone" id="dropZone"
+             ondragover="event.preventDefault(); this.classList.add('dragover')"
+             ondragleave="this.classList.remove('dragover')"
+             ondrop="handleDrop(event)">
+          <input type="file" accept=".step,.stp" onchange="handleFile(this.files[0])">
+          <div class="dz-icon">📂</div>
+          <div class="dz-label">Sleep STEP-bestand hierheen</div>
+          <div class="dz-sub">of tik om te bladeren · .step / .stp</div>
+        </div>
+
+        <!-- Status -->
+        <div class="step-status" id="stepStatus">
+          <div class="spinner" id="stepSpinner"></div>
+          <span id="stepMsg">Analyseren...</span>
+        </div>
+
+        <!-- Analyse resultaat -->
+        <div class="analyse-badge" id="analyseBadge">
+          <div class="ab-row"><span class="ab-label">Bestand</span><span class="ab-val" id="ab-file">—</span></div>
+          <div class="ab-row"><span class="ab-label">Materiaaldikte</span><span class="ab-val" id="ab-dikte">—</span></div>
+          <div class="ab-row"><span class="ab-label">Snijlengte</span><span class="ab-val" id="ab-snij">—</span></div>
+          <div class="ab-row"><span class="ab-label">Buigingen</span><span class="ab-val" id="ab-buig">—</span></div>
+          <div class="ab-row"><span class="ab-label">Insteekpunten</span><span class="ab-val" id="ab-insteek">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Onderdeel -->
+    <div class="section-card">
+      <div class="section-header orange">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+        Onderdeel
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>Omschrijving</label>
+          <input type="text" id="omschrijving" value="Onderdeel-001">
+        </div>
+        <div class="field-grid">
+          <div class="field">
+            <label>Materiaal</label>
+            <select id="materiaal">
+              <option>S235</option><option>DC01</option><option>RVS 304</option>
+              <option>RVS 316</option><option>Aluminium</option><option>Anders</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Dikte</label>
+            <div class="field-row">
+              <input type="number" id="dikte" value="2" step="0.5" min="0.5">
+              <span class="unit">mm</span>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Aantal stuks</label>
+          <div class="field-row">
+            <input type="number" id="aantal" value="10" min="1">
+            <span class="unit">st</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lasersnijden -->
+    <div class="section-card">
+      <div class="section-header">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Lasersnijden
+      </div>
+      <div class="section-body">
+        <div class="field-grid">
+          <div class="field">
+            <label>Snijlengte</label>
+            <div class="field-row">
+              <input type="number" id="snijlengte" value="1500" min="0">
+              <span class="unit">mm</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Snijsnelheid</label>
+            <div class="field-row">
+              <input type="number" id="snijsnelheid" value="3000" min="100">
+              <span class="unit">mm/m</span>
+            </div>
+          </div>
+        </div>
+        <div class="field-grid">
+          <div class="field">
+            <label>Insteekpunten</label>
+            <div class="field-row">
+              <input type="number" id="insteekpunten" value="8" min="0">
+              <span class="unit">st</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Tijd/insteek</label>
+            <div class="field-row">
+              <input type="number" id="insteektijd" value="1.5" step="0.5" min="0">
+              <span class="unit">s</span>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Insteltijd laser</label>
+          <div class="field-row">
+            <input type="number" id="insteltijd_laser" value="5" min="0">
+            <span class="unit">min</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Buigen -->
+    <div class="section-card">
+      <div class="section-header">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="4 9 4 4 20 4 20 9"/><path d="M4 13c0 4 4 7 8 7s8-3 8-7"/></svg>
+        Buigen (kantbank)
+      </div>
+      <div class="section-body">
+        <div class="field-grid">
+          <div class="field">
+            <label>Buigingen/stuk</label>
+            <div class="field-row">
+              <input type="number" id="buigingen" value="4" min="0">
+              <span class="unit">st</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Tijd/buiging</label>
+            <div class="field-row">
+              <input type="number" id="buigtijd" value="20" min="1">
+              <span class="unit">s</span>
+            </div>
+          </div>
+        </div>
+        <div class="field-grid">
+          <div class="field">
+            <label>Positioneertijd</label>
+            <div class="field-row">
+              <input type="number" id="positioneer" value="15" min="0">
+              <span class="unit">s</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Omsteltijd</label>
+            <div class="field-row">
+              <input type="number" id="omsteltijd_kantbank" value="10" min="0">
+              <span class="unit">min</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Afwerking -->
+    <div class="section-card">
+      <div class="section-header">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+        Afwerking
+      </div>
+      <div class="section-body">
+        <div class="field-grid">
+          <div class="field">
+            <label>Ontbramen</label>
+            <div class="field-row">
+              <input type="number" id="ontbramen" value="2" step="0.5" min="0">
+              <span class="unit">min</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Reinigen</label>
+            <div class="field-row">
+              <input type="number" id="reinigen" value="1" step="0.5" min="0">
+              <span class="unit">min</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tarieven -->
+    <div class="section-card">
+      <div class="section-header">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        Kostprijsindicatie
+      </div>
+      <div class="section-body">
+        <div class="field-grid">
+          <div class="field">
+            <label>Tarief laser</label>
+            <div class="field-row">
+              <input type="number" id="tarief_laser" value="80" min="0">
+              <span class="unit">€/u</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Tarief kantbank</label>
+            <div class="field-row">
+              <input type="number" id="tarief_kantbank" value="50" min="0">
+              <span class="unit">€/u</span>
+            </div>
+          </div>
+        </div>
+        <div class="field-grid">
+          <div class="field">
+            <label>Tarief afwerking</label>
+            <div class="field-row">
+              <input type="number" id="tarief_afwerk" value="35" min="0">
+              <span class="unit">€/u</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Materiaal/stuk</label>
+            <div class="field-row">
+              <input type="number" id="materiaalkosten" value="15" min="0">
+              <span class="unit">€</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="showTab('resultaat')">Bereken resultaat →</button>
+
+  </div><!-- /tab-invoer -->
+
+
+  <!-- ══════════════════════════ TAB: RESULTAAT ══════════════════════════ -->
+  <div class="tab-panel" id="tab-resultaat">
+    <div class="section-card">
+      <div class="section-header orange">Tijden per stuk</div>
+      <div class="section-body" style="padding:0">
+        <div class="breakdown">
+          <div class="breakdown-row"><span class="br-label">Lasersnijden</span><span class="br-val" id="r_laser_min">—</span></div>
+          <div class="breakdown-row"><span class="br-label">Buigen</span><span class="br-val" id="r_buig_min">—</span></div>
+          <div class="breakdown-row"><span class="br-label">Afwerking</span><span class="br-val" id="r_afwerk_min">—</span></div>
+          <div class="breakdown-row total"><span class="br-label">Cyclustijd / stuk</span><span class="br-val" id="r_cyclus">—</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="result-grid">
+      <div class="result-card highlight">
+        <div class="rc-label">Ordertijd</div>
+        <div class="rc-value" id="r_order_min">—</div>
+        <div class="rc-unit">minuten</div>
+      </div>
+      <div class="result-card accent">
+        <div class="rc-label">Ordertijd</div>
+        <div class="rc-value" id="r_order_uur">—</div>
+        <div class="rc-unit">uren</div>
+      </div>
+    </div>
+    <div class="breakdown" style="margin-bottom:14px">
+      <div class="breakdown-row"><span class="br-label">Omsteltijd totaal</span><span class="br-val" id="r_omsteltijd">—</span></div>
+      <div class="breakdown-row"><span class="br-label">Aantal stuks</span><span class="br-val" id="r_aantal">—</span></div>
+    </div>
+    <div class="section-card">
+      <div class="section-header">Kostprijsindicatie</div>
+      <div class="section-body">
+        <div class="kosten-row"><span class="kr-label">Bewerkingskosten/stuk</span><span class="kr-val" id="r_bewerk_kosten">—</span></div>
+        <div class="kosten-row"><span class="kr-label">Materiaalkosten/stuk</span><span class="kr-val" id="r_mat_kosten">—</span></div>
+        <div class="kosten-row"><span class="kr-label" style="font-weight:700;color:var(--blue)">Kostprijs per stuk</span><span class="kr-val" id="r_kostprijs_stuk" style="font-size:16px;color:var(--orange)">—</span></div>
+        <div class="kosten-row"><span class="kr-label" style="font-weight:700;color:var(--blue)">Kostprijs order totaal</span><span class="kr-val" id="r_kostprijs_order" style="font-size:16px;color:var(--orange)">—</span></div>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="resetForm()">Nieuw onderdeel</button>
+  </div>
+
+
+  <!-- ══════════════════════════ TAB: NORMEN ══════════════════════════ -->
+  <div class="tab-panel" id="tab-normen">
+    <div class="section-card" style="margin-bottom:14px">
+      <div class="section-header">Lasersnijden — snijsnelheden</div>
+      <div style="overflow-x:auto">
+        <table class="normen-table">
+          <thead><tr><th>Materiaal / dikte</th><th>Snijsnelheid</th><th>Opmerking</th></tr></thead>
+          <tbody>
+            <tr><td>S235 1.0 mm</td><td>5000–8000 mm/min</td><td></td></tr>
+            <tr><td>S235 2.0 mm</td><td>3000–5000 mm/min</td><td></td></tr>
+            <tr><td>S235 3.0 mm</td><td>2000–3500 mm/min</td><td></td></tr>
+            <tr><td>S235 5.0 mm</td><td>1200–2000 mm/min</td><td></td></tr>
+            <tr><td>RVS 304 1.0 mm</td><td>3000–5000 mm/min</td><td></td></tr>
+            <tr><td>RVS 304 2.0 mm</td><td>1500–3000 mm/min</td><td></td></tr>
+            <tr><td>Aluminium 2.0 mm</td><td>4000–6000 mm/min</td><td></td></tr>
+            <tr><td>Insteektijd</td><td>1–3 s/punt</td><td>Afhankelijk van dikte</td></tr>
+            <tr><td>Insteltijd</td><td>3–8 min</td><td>Per nieuwe job</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="section-card" style="margin-bottom:14px">
+      <div class="section-header">Buigen (kantbank)</div>
+      <div style="overflow-x:auto">
+        <table class="normen-table">
+          <thead><tr><th>Handeling</th><th>Tijd</th><th>Opmerking</th></tr></thead>
+          <tbody>
+            <tr><td>Eenvoudige buiging</td><td>10–20 s</td><td>Kleine onderdelen</td></tr>
+            <tr><td>Complexe buiging</td><td>20–45 s</td><td>Grote / zware platen</td></tr>
+            <tr><td>Positioneren stuk</td><td>10–20 s/stuk</td><td></td></tr>
+            <tr><td>Omsteltijd kantbank</td><td>5–20 min</td><td>Matrijswissel</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-header">Afwerking</div>
+      <div style="overflow-x:auto">
+        <table class="normen-table">
+          <thead><tr><th>Handeling</th><th>Tijd</th><th>Opmerking</th></tr></thead>
+          <tbody>
+            <tr><td>Ontbramen klein</td><td>1–2 min</td><td>&lt; 200 mm</td></tr>
+            <tr><td>Ontbramen groot</td><td>2–5 min</td><td>&gt; 200 mm</td></tr>
+            <tr><td>Reinigen / ontvetten</td><td>0.5–2 min</td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-footer">
+    <strong>Inno Mechatronics</strong> — Plaatwerk Calculator v1.1<br>
+    Driving the flow
+  </div>
+
+</main>
+
+<script>
+const SERVER_URL = () => document.getElementById('serverUrl').value.trim().replace(/\/$/, '');
+
+// ── SERVER CHECK ──────────────────────────────────────────────────────────────
+async function checkServer() {
+  const dot = document.getElementById('serverDot');
+  dot.className = 'server-dot';
+  try {
+    const r = await fetch(SERVER_URL() + '/status', { signal: AbortSignal.timeout(3000) });
+    if (r.ok) { dot.className = 'server-dot online'; return true; }
+  } catch {}
+  dot.className = 'server-dot offline';
+  return false;
+}
+
+// Auto-check on load
+checkServer();
+
+// ── STEP FILE HANDLING ────────────────────────────────────────────────────────
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+}
+
+async function handleFile(file) {
+  if (!file) return;
+  if (!file.name.match(/\.(step|stp)$/i)) {
+    showStatus('error', 'Alleen .step of .stp bestanden');
+    return;
+  }
+
+  showStatus('loading', `Analyseren: ${file.name}…`);
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const r = await fetch(SERVER_URL() + '/analyse', {
+      method: 'POST',
+      body: formData,
+      signal: AbortSignal.timeout(30000)
+    });
+    const data = await r.json();
+
+    if (data.error) {
+      showStatus('error', data.error);
+      return;
+    }
+
+    applyAnalysis(data);
+    showStatus('success', `✓ Klaar — velden automatisch ingevuld`);
+
+  } catch (err) {
+    if (err.name === 'TimeoutError') {
+      showStatus('error', 'Timeout — server reageert niet');
+    } else {
+      showStatus('error', 'Server niet bereikbaar. Draait server.py?');
+    }
+  }
+}
+
+function showStatus(type, msg) {
+  const el = document.getElementById('stepStatus');
+  const spinner = document.getElementById('stepSpinner');
+  const msgEl = document.getElementById('stepMsg');
+  el.className = 'step-status ' + type;
+  spinner.style.display = type === 'loading' ? 'block' : 'none';
+  msgEl.textContent = msg;
+}
+
+function applyAnalysis(data) {
+  // Vul invoervelden in
+  setField('dikte',        data.materiaaldikte);
+  setField('snijlengte',   data.snijlengte);
+  setField('insteekpunten', data.insteekpunten);
+  setField('buigingen',    data.aantal_buigingen);
+
+  // Toon badge
+  document.getElementById('ab-file').textContent    = data.bestandsnaam;
+  document.getElementById('ab-dikte').textContent   = data.materiaaldikte + ' mm  (R' + data.inner_buigradius + ')';
+  document.getElementById('ab-snij').textContent    = data.snijlengte + ' mm';
+  document.getElementById('ab-buig').textContent    = data.aantal_buigingen + '×  (' + data.buigingen.map(b => b.angle + '°').join(', ') + ')';
+  document.getElementById('ab-insteek').textContent = data.insteekpunten + (data.gaten.length ? '  (' + data.gaten.length + ' gaten)' : '  (geen gaten)');
+  document.getElementById('analyseBadge').className = 'analyse-badge visible';
+}
+
+function setField(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.value = val;
+  el.classList.add('autofilled');
+  setTimeout(() => el.classList.remove('autofilled'), 3000);
+}
+
+// ── TAB NAVIGATION ────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  const idx = ['invoer','resultaat','normen'].indexOf(name);
+  document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+  if (name === 'resultaat') calculate();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── CALCULATE ─────────────────────────────────────────────────────────────────
+const get = id => parseFloat(document.getElementById(id).value) || 0;
+const fmt = (v, d=2) => v.toFixed(d).replace('.', ',');
+const fmtEur = v => '€\u00A0' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+function calculate() {
+  const snijlengte    = get('snijlengte');
+  const snijsnelheid  = get('snijsnelheid') || 1;
+  const insteekpunten = get('insteekpunten');
+  const insteektijd   = get('insteektijd');
+  const insteltijd_l  = get('insteltijd_laser');
+  const buigingen     = get('buigingen');
+  const buigtijd_s    = get('buigtijd');
+  const positioneer   = get('positioneer');
+  const omsteltijd_k  = get('omsteltijd_kantbank');
+  const ontbramen     = get('ontbramen');
+  const reinigen      = get('reinigen');
+  const aantal        = get('aantal') || 1;
+  const tarief_l      = get('tarief_laser');
+  const tarief_k      = get('tarief_kantbank');
+  const tarief_a      = get('tarief_afwerk');
+  const mat_kosten    = get('materiaalkosten');
+
+  const laser_min  = (snijlengte / snijsnelheid) + (insteekpunten * insteektijd / 60);
+  const buig_min   = (buigingen * buigtijd_s + positioneer) / 60;
+  const afwerk_min = ontbramen + reinigen;
+  const cyclus_min = laser_min + buig_min + afwerk_min;
+  const omsteltijd = insteltijd_l + omsteltijd_k;
+  const order_min  = cyclus_min * aantal + omsteltijd;
+  const order_uur  = order_min / 60;
+  const bk_stuk    = (laser_min/60)*tarief_l + (buig_min/60)*tarief_k + (afwerk_min/60)*tarief_a;
+  const kp_stuk    = bk_stuk + mat_kosten;
+  const kp_order   = kp_stuk * aantal;
+
+  const set = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+  set('r_laser_min',      fmt(laser_min) + ' min');
+  set('r_buig_min',       fmt(buig_min) + ' min');
+  set('r_afwerk_min',     fmt(afwerk_min) + ' min');
+  set('r_cyclus',         fmt(cyclus_min) + ' min');
+  set('r_order_min',      fmt(order_min, 1));
+  set('r_order_uur',      fmt(order_uur, 2));
+  set('r_omsteltijd',     fmt(omsteltijd) + ' min');
+  set('r_aantal',         Math.round(aantal) + ' stuks');
+  set('r_bewerk_kosten',  fmtEur(bk_stuk));
+  set('r_mat_kosten',     fmtEur(mat_kosten));
+  set('r_kostprijs_stuk', fmtEur(kp_stuk));
+  set('r_kostprijs_order',fmtEur(kp_order));
+}
+
+// ── RESET ─────────────────────────────────────────────────────────────────────
+function resetForm() {
+  const defaults = {
+    omschrijving:'Onderdeel-001', dikte:2, aantal:10,
+    snijlengte:1500, snijsnelheid:3000, insteekpunten:8, insteektijd:1.5, insteltijd_laser:5,
+    buigingen:4, buigtijd:20, positioneer:15, omsteltijd_kantbank:10,
+    ontbramen:2, reinigen:1,
+    tarief_laser:80, tarief_kantbank:50, tarief_afwerk:35, materiaalkosten:15
+  };
+  for (const [id, val] of Object.entries(defaults)) {
+    const el = document.getElementById(id);
+    if (el) { el.value = val; el.classList.remove('autofilled'); }
+  }
+  document.getElementById('analyseBadge').className = 'analyse-badge';
+  document.getElementById('stepStatus').className = 'step-status';
+  showTab('invoer');
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
